@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__admet-oracle__compute_absorption_profile",
+      "mcp__admet-oracle__compute_toxicity_alerts"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "admet-oracle"
+  ]
+}

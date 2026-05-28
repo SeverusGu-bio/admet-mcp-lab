@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "admet-oracle": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/ABSOLUTE/PATH/TO/admet-mcp-lab",
+        "run",
+        "src/starter_server.py"
+      ]
+    }
+  }
+}
