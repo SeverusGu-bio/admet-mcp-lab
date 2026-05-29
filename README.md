@@ -51,29 +51,39 @@ The starter server has **one tool implemented** (`compute_toxicity_alerts`)
 and **three stubs** you fill in during the lab: a tool, a resource, and a
 prompt.
 
-## What this server exposes
+## What I built
 
-- **Tools**
-  - `compute_toxicity_alerts(smiles)` — PAINS + Brenk substructure
-    filters and a hERG basic-amine/logP heuristic. Returns a
-    `ToxicityProfile` with per-alert confidence levels.
-  - `compute_absorption_profile(smiles)` — six RDKit descriptors plus
-    Lipinski, Veber, and Egan rule sets. Returns an `AbsorptionProfile`
-    with a `favorable` / `borderline` / `poor` overall verdict.
-- **Resources**
-  - `reference://{name}` — library lookup by drug name (case-insensitive).
-  - `compound://{drug_id}` — library lookup by DrugBank-style id, e.g.
-    `compound://DB00945`.
-- **Prompt**
-  - `admet_triage(compound_identifier, therapeutic_context, concerns)` —
-    a parameterized triage protocol that orchestrates the resources and
-    tools above and demands explicit confidence tagging in the writeup.
+Filled in the three lab stubs in `src/starter_server.py` and added
+input validation and structured logging on top.
 
-Every numeric value, rule outcome, and verdict is tagged with one of
-`experimental`, `rule_based`, or `heuristic` so the calling LLM can
-weight evidence appropriately. All tools validate input (non-empty
-string, ≤ 500 chars) before parsing and emit a single-line structured
-log per call for grep-friendly observability.
+- **Tool — `compute_absorption_profile(smiles)`**: parsed the SMILES,
+  computed MW, logP, TPSA, HBD, HBA, and rotatable bonds with RDKit,
+  then ran Lipinski (MW≤500, logP≤5, HBD≤5, HBA≤10), Veber (rotb≤10,
+  TPSA≤140), and Egan (logP≤5.88, TPSA≤131.6). Each rule returns
+  pass/fail with the specific violations listed. Rolled the three
+  results into an overall verdict: `favorable` (0 fails), `borderline`
+  (1 fail), `poor` (≥2 fails). Tagged descriptors as `experimental`,
+  rule outcomes as `rule_based`, and the verdict as `heuristic`. Wrote
+  the docstring as instructions a careful junior chemist could follow.
+  Verified aspirin → `favorable`, azithromycin → `poor`.
+- **Resource — `compound://{drug_id}`**: SQLite lookup by DrugBank-style
+  id (e.g. `DB00945`), returning the same JSON shape as
+  `reference://{name}`. On a miss it returns a JSON object with an
+  `error` field rather than raising, so Claude keeps going.
+- **Prompt — `admet_triage(compound_identifier, therapeutic_context, concerns)`**:
+  multi-paragraph instruction that walks the model through resolving
+  the compound via a resource, calling both ADMET tools, tagging every
+  finding by confidence level, and closing with a medicinal-chemist
+  recommendation tied back to the supplied context and concerns.
+
+For the security/observability rubric I added a `validate_smiles_input`
+helper (rejects non-strings, empty/whitespace input, and SMILES over
+500 chars, with the error message naming the failed check) and wired
+it into both tools. `compute_absorption_profile` also emits a single
+structured log line per call — `tool=... compound=... verdict=...
+elapsed_ms=...` — that greps cleanly during a Scenario 2 multi-call run.
+
+The starter test suite (`uv run pytest -q`) still passes 7/7.
 
 ## During the lab
 
